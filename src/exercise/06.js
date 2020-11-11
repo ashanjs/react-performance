@@ -1,6 +1,7 @@
 // Fix "perf death by a thousand cuts"
 // http://localhost:3000/isolated/exercise/06.js
 
+import { slice } from 'lodash'
 import * as React from 'react'
 import {
   useForceRerender,
@@ -116,14 +117,20 @@ function Grid() {
 }
 Grid = React.memo(Grid)
 
-function Cell({ row, column }) {
-  const state = useAppState()
-  const cell = state.grid[row][column]
-  return (<CellImpl cell={cell} row={row} column={column} />)
-}
-Cell = React.memo(Cell)
+function withStateSlice(Comp, slice) {
 
-function CellImpl({ cell, row, column }) {
+  const MemComp = React.memo(Comp)
+
+  function Wrapper(props, ref) {
+    const state = useAppState()
+    //const cell = state.grid[row][column]
+    return (<MemComp ref={ref} state={slice(state, props)} {...props} />)
+  }
+  Wrapper.displayName = `withStateSlice(${Comp.displayName || Comp.name})`
+  return React.memo(React.forwardRef(Wrapper))
+}
+
+function Cell({ state: cell, row, column }) {
 
   const dispatch = useAppDispatch()
   const handleClick = () => dispatch({ type: 'UPDATE_GRID_CELL', row, column })
@@ -140,7 +147,7 @@ function CellImpl({ cell, row, column }) {
     </button>
   )
 }
-CellImpl = React.memo(CellImpl)
+Cell = withStateSlice(Cell, (state, { row, column }) => state.grid[row][column])
 
 function DogNameInput() {
 
